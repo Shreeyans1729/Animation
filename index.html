@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Gesture Particles</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: sans-serif; touch-action: none; }
+        canvas { display: block; }
+        
+        #video-container {
+            position: absolute;
+            bottom: 20px;
+            right: 20px; /* Moved to right for better thumb reach on mobile */
+            width: 160px; /* Smaller default for mobile */
+            height: 213px; /* 3:4 Aspect Ratio typically */
+            border: 2px solid #333;
+            border-radius: 10px;
+            overflow: hidden;
+            z-index: 10;
+            opacity: 0.7;
+            pointer-events: none; /* Let touches pass through */
+        }
+
+        #webcam {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #00ff88;
+            pointer-events: none;
+            z-index: 20;
+            text-shadow: 0 0 5px #000;
+        }
+
+        h1 { font-size: 1.2rem; margin: 0 0 5px 0; letter-spacing: 1px; }
+        p { font-size: 0.9rem; margin: 0; opacity: 0.9; font-weight: bold; }
+        
+        .instruction { 
+            color: white; 
+            margin-top: 10px; 
+            font-size: 0.75rem; 
+            line-height: 1.4; 
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 8px;
+            display: inline-block;
+        }
+
+        /* Desktop Overrides */
+        @media (min-width: 768px) {
+            #video-container {
+                left: 20px;
+                right: auto;
+                width: 240px;
+                height: 180px;
+            }
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+</head>
+<body>
+
+    <div id="ui">
+        <h1>Particle Morph</h1>
+        <p id="status">Loading Camera...</p>
+        <div class="instruction">
+            ☝️ <b>1 Finger:</b> Heart<br>
+            ✌️ <b>2 Fingers:</b> Saturn<br>
+            🤟 <b>3 Fingers:</b> Flower<br>
+            🖐 <b>Open:</b> Cloud<br>
+            ✊ <b>Fist:</b> Implode<br>
+            👌 <b>Pinch:</b> Color
+        </div>
+    </div>
+
+    <div id="video-container">
+        <video id="webcam" playsinline muted autoplay></video>
+    </div>
+
+<script>
+    // --- MOBILE DETECTION & CONFIG ---
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
+    // Reduce particle count on mobile for FPS stability
+    const PARTICLE_COUNT = isMobile ? 8000 : 18000;
+    const PARTICLE_SIZE = isMobile ? 0.25 : 0.15;
+    const MORPH_SPEED = 0.08;
+
+    // --- THREE.JS SETUP ---
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.z = isMobile ? 45 : 30; // Move camera back on mobile to see full shapes
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Cap pixel ratio for performance
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // --- PARTICLES ---
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(PARTICLE_COUNT * 3);
+    const targetPositions = new Float32Array(PARTICLE_COUNT * 3);
+    const colors = new Float32Array(PARTICLE_COUNT * 3);
+    const colorObj = new THREE.Color(0x00ff88);
+
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+        positions[i * 3] = (Math.random() - 0.5) * 50;
+        positions[i * 3 + 1] = (Math.random() - 0.5) * 50;
+        positions[i * 3 + 2] = (Math.random() - 0.5) * 50;
+        
+        targetPositions[i*3] = positions[i*3];
+        targetPositions[i*3+1] = positions[i*3+1];
+        targetPositions[i*3+2] = positions[i*3+2];
+
+        colors[i * 3] = colorObj.r;
+        colors[i * 3 + 1] = colorObj.g;
+        colors[i * 3 + 2] = colorObj.b;
+    }
+
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+    const material = new THREE.PointsMaterial({
+        size: PARTICLE_SIZE,
+        vertexColors: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        transparent: true,
+        opacity: 0.8
+    });
+
+    const particles = new THREE.Points(geometry, material);
+    scene.add(particles);
+
+    // --- SHAPE LOGIC (SAME AS BEFORE) ---
+    function getSpherePoint(r) {
+        const u = Math.random();
+        const v = Math.random();
+        const theta = 2 * Math.PI * u;
+        const phi = Math.acos(2 * v - 1);
+        return {
+            x: r * Math.sin(phi) * Math.cos(theta),
+            y: r * Math.sin(phi) * Math.sin(theta),
+            z: r * Math.cos(phi)
+        };
+    }
+
+    function generateShape(type) {
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+            let x, y, z;
+            const idx = i * 3;
+
+            if (type === 'heart') {
+                const t_heart = Math.random() * Math.PI * 2;
+                // Parametric heart
+                x = 16 * Math.pow(Math.sin(t_heart), 3);
+                y = 13 * Math.cos(t_heart) - 5 * Math.cos(2 * t_heart) - 2 * Math.cos(3 * t_heart) - Math.cos(4 * t_heart);
+                z = (Math.random() - 0.5) * 10;
+                x *= 0.5; y *= 0.5; z *= 0.5;
+            } 
+            else if (type === 'saturn') {
+                if (i < PARTICLE_COUNT * 0.7) {
+                    const p = getSpherePoint(6);
+                    x = p.x; y = p.y; z = p.z;
+                } else {
+                    const angle = Math.random() * Math.PI * 2;
+                    const r = 9 + Math.random() * 5;
+                    x = r * Math.cos(angle);
+                    y = (Math.random() - 0.5) * 0.5;
+                    z = r * Math.sin(angle);
+                    const tilt = 0.4;
+                    const yNew = y * Math.cos(tilt) - z * Math.sin(tilt);
+                    const zNew = y * Math.sin(tilt) + z * Math.cos(tilt);
+                    y = yNew; z = zNew;
+                }
+            } 
+            else if (type === 'flower') {
+                 const k = 5; 
+                 const theta = Math.random() * Math.PI * 2;
+                 const r = 10 * Math.cos(k * theta);
+                 x = r * Math.cos(theta);
+                 y = r * Math.sin(theta);
+                 z = (Math.random() - 0.5) * 5;
+            }
+            else if (type === 'implode') {
+                x = 0; y = 0; z = 0;
+            }
+            else { // Cloud
+                x = (Math.random() - 0.5) * 40;
+                y = (Math.random() - 0.5) * 40;
+                z = (Math.random() - 0.5) * 40;
+            }
+            targetPositions[idx] = x;
+            targetPositions[idx+1] = y;
+            targetPositions[idx+2] = z;
+        }
+    }
+
+    // --- HAND TRACKING ---
+    const videoElement = document.getElementById('webcam');
+    const statusElement = document.getElementById('status');
+    let currentGesture = 'cloud';
+    let pinchDetected = false;
+
+    function countFingers(landmarks) {
+        const tips = [8, 12, 16, 20];
+        const pips = [6, 10, 14, 18];
+        let count = 0;
+
+        for (let i = 0; i < tips.length; i++) {
+            // Check Y (Note: MediaPipe coords: 0 is top, 1 is bottom)
+            if (landmarks[tips[i]].y < landmarks[pips[i]].y) count++;
+        }
+        
+        // Thumb Logic
+        // Determine Handedness roughly by checking X relative to wrist
+        const isRightHand = landmarks[4].x < landmarks[17].x; 
+        if (isRightHand) {
+            if (landmarks[4].x < landmarks[3].x) count++;
+        } else {
+            if (landmarks[4].x > landmarks[3].x) count++;
+        }
+
+        // Pinch Detection
+        const dx = landmarks[8].x - landmarks[4].x;
+        const dy = landmarks[8].y - landmarks[4].y;
+        if (Math.sqrt(dx*dx + dy*dy) < 0.05) {
+            if (!pinchDetected) changeColor();
+            pinchDetected = true;
+        } else {
+            pinchDetected = false;
+        }
+        return count;
+    }
+
+    function changeColor() {
+        const r = Math.random();
+        const g = Math.random();
+        const b = Math.random();
+        const colorsArr = particles.geometry.attributes.color.array;
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+             colorsArr[i*3] = r;
+             colorsArr[i*3+1] = g;
+             colorsArr[i*3+2] = b;
+        }
+        particles.geometry.attributes.color.needsUpdate = true;
+    }
+
+    function onResults(results) {
+        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+            const landmarks = results.multiHandLandmarks[0];
+            const fingers = countFingers(landmarks);
+            
+            let newGesture = currentGesture;
+
+            if (pinchDetected) {
+                statusElement.innerText = "✨ Color Shift";
+            } else if (fingers === 0) {
+                newGesture = 'implode';
+                statusElement.innerText = "🌑 Implode";
+            } else if (fingers === 1) {
+                newGesture = 'heart';
+                statusElement.innerText = "❤️ Heart";
+            } else if (fingers === 2) {
+                newGesture = 'saturn';
+                statusElement.innerText = "🪐 Saturn";
+            } else if (fingers === 3) {
+                newGesture = 'flower';
+                statusElement.innerText = "🌸 Flower";
+            } else {
+                newGesture = 'cloud';
+                statusElement.innerText = "☁️ Cloud";
+            }
+
+            if (newGesture !== currentGesture) {
+                currentGesture = newGesture;
+                generateShape(currentGesture);
+            }
+        } else {
+            statusElement.innerText = "Show Hand ✋";
+        }
+    }
+
+    // --- CAMERA INIT ---
+    // Use facingMode: 'user' to prefer front camera on mobile
+    async function startCamera() {
+        const hands = new Hands({locateFile: (file) => {
+            return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+        }});
+
+        hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 0, // 0 is faster (Lite), better for mobile
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+
+        hands.onResults(onResults);
+
+        const cameraUtils = new Camera(videoElement, {
+            onFrame: async () => {
+                await hands.send({image: videoElement});
+            },
+            width: isMobile ? 360 : 640,
+            height: isMobile ? 270 : 480,
+            facingMode: 'user' // IMPORTANT for mobile
+        });
+        
+        await cameraUtils.start();
+    }
+
+    startCamera();
+
+    // --- ANIMATION LOOP ---
+    function animate() {
+        requestAnimationFrame(animate);
+        const pos = particles.geometry.attributes.position.array;
+        for (let i = 0; i < PARTICLE_COUNT * 3; i++) {
+            pos[i] += (targetPositions[i] - pos[i]) * MORPH_SPEED;
+        }
+        particles.geometry.attributes.position.needsUpdate = true;
+        particles.rotation.y += 0.002;
+        renderer.render(scene, camera);
+    }
+    animate();
+
+    // --- RESIZE HANDLER ---
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+</script>
+</body>
+</html>
