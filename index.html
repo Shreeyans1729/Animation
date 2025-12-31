@@ -3,121 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Gesture Dashboard</title>
+    <title>21-Symbol Omni-Engine</title>
     <style>
-        /* --- RESET & LAYOUT --- */
+        /* --- CORE UI --- */
         body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Segoe UI', sans-serif; display: flex; height: 100vh; color: #fff; }
         
-        /* --- LEFT SIDEBAR (COMMANDS) --- */
+        /* --- SIDEBAR --- */
         #sidebar {
-            width: 300px;
-            background: #0a0a0a;
+            width: 280px;
+            background: #0f0f0f;
             border-right: 1px solid #333;
             display: flex;
             flex-direction: column;
             z-index: 20;
             flex-shrink: 0;
-            box-shadow: 5px 0 15px rgba(0,0,0,0.5);
+            box-shadow: 5px 0 20px rgba(0,0,0,0.6);
         }
 
-        .sidebar-header {
-            padding: 20px;
-            background: #111;
-            border-bottom: 1px solid #333;
-        }
+        .header { padding: 15px; background: #161616; border-bottom: 1px solid #333; }
+        .header h2 { margin: 0; color: #00e5ff; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 2px; }
+        .header p { margin: 5px 0 0; font-size: 0.75rem; color: #777; }
+
+        #list-container { flex-grow: 1; overflow-y: auto; padding: 10px; scroll-behavior: smooth; }
         
-        .sidebar-header h2 { margin: 0; font-size: 1.2rem; color: #00ff88; text-transform: uppercase; letter-spacing: 1px; }
-        .sidebar-header p { margin: 5px 0 0 0; font-size: 0.8rem; color: #888; }
-
-        #command-list {
-            flex-grow: 1;
-            overflow-y: auto;
-            padding: 10px;
+        /* List Items */
+        .item { 
+            display: flex; align-items: center; padding: 8px 12px; 
+            margin-bottom: 4px; border-radius: 6px; cursor: pointer; 
+            transition: 0.2s; border-left: 3px solid transparent; background: #1a1a1a;
         }
-
-        /* Command Groups (Pages) */
-        .page-group { margin-bottom: 20px; }
-        .page-title { 
-            font-size: 0.75rem; 
-            color: #555; 
-            text-transform: uppercase; 
-            font-weight: bold; 
-            padding: 5px 10px; 
-            margin-bottom: 5px;
-            border-bottom: 1px solid #222;
-        }
-
-        /* Command Items */
-        .cmd-item {
-            display: flex;
-            align-items: center;
-            padding: 10px;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-bottom: 4px;
-            border: 1px solid transparent;
-        }
-
-        .cmd-item:hover { background: #1a1a1a; }
+        .item:hover { background: #252525; }
+        .item.active { background: rgba(0, 229, 255, 0.15); border-left-color: #00e5ff; }
         
-        /* Active State (Triggered) */
-        .cmd-item.active {
-            background: rgba(0, 255, 136, 0.15);
-            border-color: #00ff88;
+        .icon { font-size: 1.4rem; width: 35px; text-align: center; margin-right: 10px; }
+        .label { display: flex; flex-direction: column; }
+        .name { font-weight: 600; font-size: 0.9rem; color: #eee; }
+        .desc { font-size: 0.75rem; color: #888; }
+
+        /* --- MAIN VIEW --- */
+        #main { flex-grow: 1; position: relative; overflow: hidden; background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); }
+        
+        /* Camera PIP */
+        #cam-box {
+            position: absolute; bottom: 20px; right: 20px;
+            width: 180px; height: 135px;
+            border: 2px solid #444; border-radius: 12px;
+            overflow: hidden; z-index: 10; opacity: 0.8;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        #webcam { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+
+        /* Notification Toast */
+        #toast {
+            position: absolute; top: 30px; left: 50%; transform: translateX(-50%);
+            background: rgba(0, 229, 255, 0.9); color: #000;
+            padding: 10px 25px; border-radius: 30px; font-weight: bold;
+            box-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
+            opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 30;
         }
 
-        .cmd-icon { font-size: 1.2rem; width: 30px; text-align: center; margin-right: 10px; }
-        .cmd-info { display: flex; flex-direction: column; }
-        .cmd-name { font-weight: bold; font-size: 0.95rem; }
-        .cmd-trigger { font-size: 0.75rem; color: #888; }
-
-        /* --- RIGHT MAIN AREA (ACTIVITY) --- */
-        #main-display {
-            flex-grow: 1;
-            position: relative;
-            overflow: hidden;
-            background: radial-gradient(circle at center, #111 0%, #000 100%);
-        }
-
-        canvas { display: block; width: 100%; height: 100%; }
-
-        /* Camera Feed (Floating) */
-        #video-container {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            width: 200px;
-            height: 150px;
-            border: 2px solid #333;
-            border-radius: 12px;
-            overflow: hidden;
-            background: #000;
-            z-index: 10;
-        }
-        #webcam { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); opacity: 0.7; }
-
-        /* Page Indicator Overlay */
-        #page-toast {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.7);
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-weight: bold;
-            border: 1px solid #333;
-            opacity: 0;
-            transition: opacity 0.5s;
-            pointer-events: none;
-        }
-
-        /* --- MOBILE RESPONSIVE --- */
+        /* --- MOBILE --- */
         @media (max-width: 768px) {
             body { flex-direction: column; }
-            #sidebar { width: 100%; height: 35vh; border-right: none; border-top: 1px solid #333; order: 2; }
-            #main-display { height: 65vh; order: 1; }
-            #video-container { width: 100px; height: 75px; top: 10px; right: 10px; bottom: auto; }
+            #sidebar { width: 100%; height: 35vh; order: 2; border-right: none; border-top: 1px solid #333; }
+            #main { height: 65vh; order: 1; }
+            #cam-box { width: 100px; height: 75px; top: 10px; right: 10px; bottom: auto; }
+            .item { padding: 6px 10px; }
         }
     </style>
     
@@ -128,243 +79,328 @@
 <body>
 
     <div id="sidebar">
-        <div class="sidebar-header">
-            <h2>Gestures</h2>
-            <p>Show hand or Click to activate</p>
+        <div class="header">
+            <h2>Omni-Gesture</h2>
+            <p>21 Symbols • 1 Page</p>
         </div>
-        <div id="command-list">
+        <div id="list-container">
             </div>
     </div>
 
-    <div id="main-display">
-        <div id="page-toast">Page 1</div>
-        <div id="video-container">
-            <video id="webcam" playsinline muted autoplay></video>
-        </div>
-        </div>
+    <div id="main">
+        <div id="toast">Ready</div>
+        <div id="cam-box"><video id="webcam" playsinline muted autoplay></video></div>
+    </div>
 
 <script>
-    // --- DATA: THE 30 SYMBOLS ---
-    // Icons mapped to triggers
-    const TRIGGERS = ['✊ Fist', '☝️ Point', '✌️ Victory', '🤟 3-Fin', '🖖 4-Fin', '🖐 Open'];
-    
-    const LIBRARY = [
-        { title: "Page 1: Cosmic", items: [
-            { id: 'void', name: 'Singularity', desc: 'Black Hole' },
-            { id: 'sphere', name: 'Planet', desc: 'Wireframe Sphere' },
-            { id: 'saturn', name: 'Saturn', desc: 'Ringed Planet' },
-            { id: 'galaxy', name: 'Galaxy', desc: 'Spiral Arms' },
-            { id: 'nebula', name: 'Nebula', desc: 'Star Cloud' },
-            { id: 'bigbang', name: 'Big Bang', desc: 'Explosion' }
-        ]},
-        { title: "Page 2: Geometry", items: [
-            { id: 'cube', name: 'Hypercube', desc: 'Box Shape' },
-            { id: 'pyramid', name: 'Pyramid', desc: 'Tetrahedron' },
-            { id: 'torus', name: 'Donut', desc: 'Torus Ring' },
-            { id: 'mobius', name: 'Mobius', desc: 'Twisted Strip' },
-            { id: 'klein', name: 'Klein Bottle', desc: 'Mathematical Surface' },
-            { id: 'dodeca', name: 'Dodeca', desc: '12-Sided Obj' }
-        ]},
-        { title: "Page 3: Nature", items: [
-            { id: 'seed', name: 'Acorn', desc: 'Compact Seed' },
-            { id: 'tree', name: 'Pine Tree', desc: 'Fractal Cone' },
-            { id: 'flower', name: 'Rose', desc: 'Petal Pattern' },
-            { id: 'leaf', name: 'Fern', desc: 'Leaf Structure' },
-            { id: 'mushroom', name: 'Shroom', desc: 'Cap Shape' },
-            { id: 'mountain', name: 'Peak', desc: 'Terrain Map' }
-        ]},
-        { title: "Page 4: Physics", items: [
-            { id: 'atom', name: 'Atom', desc: 'Orbiting Electrons' },
-            { id: 'dna', name: 'DNA', desc: 'Double Helix' },
-            { id: 'wave', name: 'Wave', desc: 'Sine Surface' },
-            { id: 'magnet', name: 'Magnet', desc: 'Field Lines' },
-            { id: 'fluid', name: 'Fluid', desc: 'Liquid Sim' },
-            { id: 'chaos', name: 'Chaos', desc: 'Strange Attractor' }
-        ]},
-        { title: "Page 5: Symbols", items: [
-            { id: 'heart', name: 'Heart', desc: 'Love Symbol' },
-            { id: 'star', name: 'Star', desc: 'Super Star' },
-            { id: 'diamond', name: 'Gem', desc: 'Crystal' },
-            { id: 'skull', name: 'Skull', desc: 'Bone Shape' },
-            { id: 'ghost', name: 'Spirit', desc: 'Floating Sheet' },
-            { id: 'phoenix', name: 'Phoenix', desc: 'Fire Bird' }
-        ]}
-    ];
-
-    // --- UI BUILDER ---
-    const listContainer = document.getElementById('command-list');
-    
-    LIBRARY.forEach((page, pageIdx) => {
-        // Create Section Header
-        const header = document.createElement('div');
-        header.className = 'page-title';
-        header.innerText = page.title;
-        listContainer.appendChild(header);
-
-        // Create Items
-        page.items.forEach((item, itemIdx) => {
-            const el = document.createElement('div');
-            el.className = 'cmd-item';
-            el.id = `cmd-${pageIdx}-${itemIdx}`; // Unique ID
-            el.innerHTML = `
-                <div class="cmd-icon">${TRIGGERS[itemIdx].split(' ')[0]}</div>
-                <div class="cmd-info">
-                    <span class="cmd-name">${item.name}</span>
-                    <span class="cmd-trigger">${TRIGGERS[itemIdx]}</span>
-                </div>
-            `;
-            // Click to activate
-            el.onclick = () => {
-                STATE.page = pageIdx;
-                STATE.gestureIdx = itemIdx;
-                updateShapeFromState();
-            };
-            listContainer.appendChild(el);
-        });
-    });
-
-    // --- STATE ---
-    const STATE = {
-        page: 0,
-        gestureIdx: 5, // Start with 'Big Bang' (Open hand)
-        isMobile: /Mobi|Android/i.test(navigator.userAgent)
+    // --- 1. CONFIGURATION & DATA ---
+    const CONFIG = {
+        mobile: /Mobi|Android/i.test(navigator.userAgent),
+        particleCount: /Mobi|Android/i.test(navigator.userAgent) ? 10000 : 22000
     };
 
-    // --- THREE.JS ENGINE ---
-    const mainArea = document.getElementById('main-display');
-    const PARTICLE_COUNT = STATE.isMobile ? 12000 : 25000;
+    const SYMBOLS = [
+        // FINGERS / POINTERS
+        { id: 'bigbang', icon: '☝️', name: 'Big Bang', desc: 'Point Up (Palm)' },
+        { id: 'cloud',   icon: '👆', name: 'Cloud', desc: 'Point Up (Backhand)' },
+        { id: 'rain',    icon: '👇', name: 'Rain', desc: 'Point Down' },
+        { id: 'sun',     icon: '👈', name: 'Sun', desc: 'Point Left' },
+        { id: 'saturn',  icon: '👉', name: 'Saturn', desc: 'Point Right' },
+        
+        // FISTS
+        { id: 'heart',   icon: '✊', name: 'Heart', desc: 'Fist (Upright)' },
+        { id: 'cube',    icon: '👊', name: 'Cube', desc: 'Fist (Forward/Punch)' },
+        { id: 'butterfly', icon: '🤛', name: 'Butterfly', desc: 'Fist (Sideways)' },
+        
+        // OPEN HAND VARIANTS
+        { id: 'milkyway', icon: '✋', name: 'Milky Way', desc: 'Palm Open (Together)' },
+        { id: 'pizza',    icon: '🖐️', name: 'Pizza', desc: 'Palm Open (Splayed)' },
+        { id: 'birds',    icon: '🤚', name: 'Birds', desc: 'Back of Hand' },
+        { id: 'river',    icon: '🫱', name: 'River', desc: 'Hand Side (Right)' },
+        { id: 'dna',      icon: '👋', name: 'DNA', desc: 'Waving Hand' },
+        
+        // COMPLEX SHAPES
+        { id: 'cake',    icon: '✌️', name: 'Cake', desc: 'Victory Sign' },
+        { id: 'blackhole', icon: '👌', name: 'Black Hole', desc: 'OK Sign' },
+        { id: 'sphere',  icon: '👍', name: 'Sphere', desc: 'Thumbs Up' },
+        { id: 'donut',   icon: '👎', name: 'Donut', desc: 'Thumbs Down' },
+        { id: 'burger',  icon: '🖖', name: 'Burger', desc: 'Vulcan Salute' },
+        { id: 'crown',   icon: '🤙', name: 'Crown', desc: 'Shaka' },
+        { id: 'cat',     icon: '🤟', name: 'Cat', desc: 'Love Sign' },
+        
+        // SPECIAL
+        { id: 'color',   icon: '🤘', name: 'Color Shift', desc: 'Rock On' }
+    ];
+
+    // --- 2. UI GENERATOR ---
+    const listEl = document.getElementById('list-container');
     
+    SYMBOLS.forEach((sym, idx) => {
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.id = `item-${sym.id}`;
+        div.innerHTML = `<div class="icon">${sym.icon}</div><div class="label"><span class="name">${sym.name}</span><span class="desc">${sym.desc}</span></div>`;
+        div.onclick = () => activateSymbol(sym.id);
+        listEl.appendChild(div);
+    });
+
+    // --- 3. THREE.JS ENGINE ---
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, mainArea.clientWidth / mainArea.clientHeight, 0.1, 1000);
-    camera.position.z = 40;
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    camera.position.z = CONFIG.mobile ? 50 : 35;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(mainArea.clientWidth, mainArea.clientHeight);
+    renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    mainArea.appendChild(renderer.domElement);
+    document.getElementById('main').appendChild(renderer.domElement);
 
-    // Particles
-    const geometry = new THREE.BufferGeometry();
-    const positions = new Float32Array(PARTICLE_COUNT * 3);
-    const targetPositions = new Float32Array(PARTICLE_COUNT * 3);
-    const colors = new Float32Array(PARTICLE_COUNT * 3);
-    
-    for(let i=0; i<PARTICLE_COUNT; i++) {
-        positions[i*3] = (Math.random()-0.5)*100;
-        positions[i*3+1] = (Math.random()-0.5)*100;
-        positions[i*3+2] = (Math.random()-0.5)*100;
-        targetPositions[i*3] = positions[i*3];
-        colors[i*3]=1; colors[i*3+1]=1; colors[i*3+2]=1;
+    const particles = new THREE.BufferGeometry();
+    const pos = new Float32Array(CONFIG.particleCount * 3);
+    const target = new Float32Array(CONFIG.particleCount * 3);
+    const cols = new Float32Array(CONFIG.particleCount * 3);
+    const baseCols = new Float32Array(CONFIG.particleCount * 3);
+
+    for(let i=0; i<CONFIG.particleCount; i++){
+        pos[i*3] = (Math.random()-0.5)*100;
+        pos[i*3+1] = (Math.random()-0.5)*100;
+        pos[i*3+2] = (Math.random()-0.5)*100;
+        target[i*3]=pos[i*3];
+        cols[i*3]=1; cols[i*3+1]=1; cols[i*3+2]=1;
     }
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    particles.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    particles.setAttribute('color', new THREE.BufferAttribute(cols, 3));
     
-    const material = new THREE.PointsMaterial({ size: STATE.isMobile?0.25:0.15, vertexColors: true, blending: THREE.AdditiveBlending, transparent: true, opacity: 0.8 });
-    const particles = new THREE.Points(geometry, material);
-    scene.add(particles);
+    const mat = new THREE.PointsMaterial({ size: CONFIG.mobile?0.25:0.15, vertexColors: true, blending: THREE.AdditiveBlending, transparent: true, opacity: 0.8 });
+    const mesh = new THREE.Points(particles, mat);
+    scene.add(mesh);
 
-    // --- MATH & SHAPES ---
-    function getTarget(id, u, v, i) {
-        let x=0, y=0, z=0;
-        const PI = Math.PI;
-        // Reuse the math from previous version (simplified for brevity)
-        // You can paste the full math block here if needed, I'll use a subset for demo
-        switch(id) {
-            case 'void': x=(Math.random()-0.5)*2; y=(Math.random()-0.5)*2; break;
-            case 'sphere': x=15*Math.sin(2*PI*u)*Math.cos(2*PI*v); y=15*Math.sin(2*PI*u)*Math.sin(2*PI*v); z=15*Math.cos(2*PI*u); break;
-            case 'galaxy': const r=u*25; const a=r+i*0.05; x=r*Math.cos(a); z=r*Math.sin(a); y=(Math.random()-0.5)*5; break;
-            case 'pyramid': const h=(u-0.5)*20; const s=(1-(h+10)/20)*15; x=(Math.random()-0.5)*s; z=(Math.random()-0.5)*s; y=h; break;
-            case 'cube': const c=18; x=(Math.random()-0.5)*c; y=(Math.random()-0.5)*c; z=(Math.random()-0.5)*c; break;
-            case 'heart': const t=u*2*PI; x=16*Math.pow(Math.sin(t),3); y=13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t); z=(v-0.5)*5; break;
-            case 'dna': const hd=(u-0.5)*40; const ad=hd*0.5; const st=(i%2==0)?0:PI; x=8*Math.cos(ad+st); z=8*Math.sin(ad+st); y=hd; break;
-            default: // Default cloud for unimplemented
-                x=(Math.random()-0.5)*30; y=(Math.random()-0.5)*30; z=(Math.random()-0.5)*30;
+    // --- 4. MATH SHAPES ---
+    function generatePositions(type) {
+        let r, g, b;
+        
+        // Default Colors
+        if(type==='heart') { r=1; g=0; b=0.2; }
+        else if(type==='rain') { r=0; g=0.5; b=1; }
+        else if(type==='sun') { r=1; g=0.6; b=0; }
+        else if(type==='milkyway') { r=0.5; g=0; b=1; }
+        else if(type==='pizza') { r=1; g=0.5; b=0; }
+        else { r=0; g=1; b=0.8; } // Cyan default
+
+        for(let i=0; i<CONFIG.particleCount; i++) {
+            const u = Math.random(); 
+            const v = Math.random();
+            const idx = i*3;
+            let x=0, y=0, z=0;
+            const PI = Math.PI;
+
+            switch(type) {
+                case 'bigbang': x=(u-0.5)*100; y=(v-0.5)*100; z=(Math.random()-0.5)*100; break;
+                case 'cloud': x=(u-0.5)*40; y=(v-0.5)*15; z=(Math.random()-0.5)*15; break;
+                case 'rain': x=(u-0.5)*30; y=20 - v*40; z=(Math.random()-0.5)*30; break;
+                case 'sun': const rs=12; const as=u*2*PI; const bs=v*PI; x=rs*Math.sin(bs)*Math.cos(as); y=rs*Math.sin(bs)*Math.sin(as); z=rs*Math.cos(bs); 
+                    x += (Math.random()-0.5)*2; // fuzzy
+                    break;
+                case 'saturn': 
+                    if(i<CONFIG.particleCount*0.7) { // Planet
+                         const rp=8; x=rp*Math.sin(v*PI)*Math.cos(u*2*PI); y=rp*Math.sin(v*PI)*Math.sin(u*2*PI); z=rp*Math.cos(v*PI);
+                    } else { // Rings
+                        const rr=12+u*6; const ar=v*2*PI; x=rr*Math.cos(ar); z=rr*Math.sin(ar); y=(Math.random()-0.5)*0.5;
+                    }
+                    // Tilt
+                    const ty=y*Math.cos(0.4)-z*Math.sin(0.4); const tz=y*Math.sin(0.4)+z*Math.cos(0.4); y=ty; z=tz;
+                    break;
+                case 'heart': const th=u*2*PI; x=16*Math.pow(Math.sin(th),3); y=13*Math.cos(th)-5*Math.cos(2*th)-2*Math.cos(3*th)-Math.cos(4*th); z=(v-0.5)*5; break;
+                case 'cube': const s=18; x=(u-0.5)*s; y=(v-0.5)*s; z=(Math.random()-0.5)*s; break;
+                case 'butterfly': 
+                    const tb=u*2*PI; 
+                    const rb=Math.exp(Math.cos(tb)) - 2*Math.cos(4*tb) - Math.pow(Math.sin(tb/12), 5);
+                    x=rb*Math.cos(tb)*8; y=rb*Math.sin(tb)*8; z=(v-0.5)*2 + Math.abs(x)*0.2; 
+                    break;
+                case 'milkyway': const galR=u*25; const galA=galR+i*0.05; x=galR*Math.cos(galA); z=galR*Math.sin(galA); y=(v-0.5)*5; break;
+                case 'pizza': const pR=u*15; const pA=v*2*PI; x=pR*Math.cos(pA); z=pR*Math.sin(pA); y=0; 
+                    if(Math.random()>0.9) y=1; // toppings
+                    break;
+                case 'birds': // V shapes
+                    const flockX = (u-0.5)*40; const flockZ=(v-0.5)*20; 
+                    x=flockX + Math.abs(Math.sin(i))*2; y=Math.sin(flockX*0.2)*5 + Math.cos(i)*2; z=flockZ;
+                    break;
+                case 'river': x=(u-0.5)*50; z=(v-0.5)*20; y=5*Math.sin(x*0.2 + i*0.001); break;
+                case 'dna': const hD=(u-0.5)*40; const aD=hD*0.5; const str=(i%2==0)?0:PI; x=8*Math.cos(aD+str); z=8*Math.sin(aD+str); y=hD; break;
+                case 'cake': // Cylinders
+                     const ly = i%3; 
+                     const cr = ly==0?10 : (ly==1?7:4);
+                     const ch = ly==0?-5 : (ly==1?0:5);
+                     x=cr*Math.cos(u*2*PI); z=cr*Math.sin(u*2*PI); y=ch + (v-0.5)*3;
+                     break;
+                case 'blackhole': const bR=6+u*10; const bA=v*2*PI + bR; x=bR*Math.cos(bA); z=bR*Math.sin(bA); y=(10/bR)*-5; break;
+                case 'sphere': x=15*Math.sin(v*PI)*Math.cos(u*2*PI); y=15*Math.sin(v*PI)*Math.sin(u*2*PI); z=15*Math.cos(v*PI); break;
+                case 'donut': const tR=12; const tr=4; x=(tR+tr*Math.cos(v*2*PI))*Math.cos(u*2*PI); y=(tR+tr*Math.cos(v*2*PI))*Math.sin(u*2*PI); z=tr*Math.sin(v*2*PI); break;
+                case 'burger': // Bun, Meat, Bun
+                     const bl = i%3;
+                     const br = 9; 
+                     const by = bl==0?-4 : (bl==1?0:4);
+                     x=br*Math.cos(u*2*PI); z=br*Math.sin(u*2*PI); y=by + (v-0.5)*3;
+                     if(bl==1) { x*=0.9; z*=0.9; } // Meat smaller
+                     break;
+                case 'crown': const cA=u*2*PI; const cR=10; x=cR*Math.cos(cA); z=cR*Math.sin(cA); y=5*Math.abs(Math.sin(cA*2.5)) - 5; break;
+                case 'cat': 
+                    // Head
+                    x=8*Math.sin(v*PI)*Math.cos(u*2*PI); y=8*Math.sin(v*PI)*Math.sin(u*2*PI); z=8*Math.cos(v*PI);
+                    // Ears
+                    if(i>CONFIG.particleCount*0.85) { x=4 + u*3; y=6 + v*4; z=0; }
+                    if(i>CONFIG.particleCount*0.92) { x=-4 - u*3; y=6 + v*4; z=0; }
+                    break;
+                case 'color': // Special case, no shape change, just chaos
+                    x=(Math.random()-0.5)*50; y=(Math.random()-0.5)*50; z=(Math.random()-0.5)*50; 
+                    break;
+            }
+            
+            target[idx]=x; target[idx+1]=y; target[idx+2]=z;
+            
+            // Set Color
+            baseCols[idx]=r; baseCols[idx+1]=g; baseCols[idx+2]=b;
+            if (type === 'color') { // Rainbow mode
+                 baseCols[idx]=Math.random(); baseCols[idx+1]=Math.random(); baseCols[idx+2]=Math.random();
+            }
         }
-        return {x,y,z};
     }
 
-    // Color Maps
-    const COLORS = [ [0,0.5,1], [0,1,0], [1,0.5,0], [0,1,1], [1,0,0.5] ]; // Per page
-
-    function updateShapeFromState() {
-        const page = LIBRARY[STATE.page];
-        const item = page.items[STATE.gestureIdx];
-        const theme = COLORS[STATE.page];
-
-        // Highlight UI
-        document.querySelectorAll('.cmd-item').forEach(el => el.classList.remove('active'));
-        const activeEl = document.getElementById(`cmd-${STATE.page}-${STATE.gestureIdx}`);
-        if(activeEl) {
-            activeEl.classList.add('active');
-            activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    let currentId = '';
+    function activateSymbol(id) {
+        if(currentId === id) return;
+        currentId = id;
+        
+        // Update UI
+        document.querySelectorAll('.item').forEach(el => el.classList.remove('active'));
+        const el = document.getElementById(`item-${id}`);
+        if(el) {
+            el.classList.add('active');
+            el.scrollIntoView({block: 'center', behavior: 'smooth'});
         }
 
         // Show Toast
-        const toast = document.getElementById('page-toast');
-        toast.innerText = `${page.title.split(':')[0]} - ${item.name}`;
+        const toast = document.getElementById('toast');
+        const sym = SYMBOLS.find(s => s.id === id);
+        toast.innerText = `${sym.icon} ${sym.name}`;
         toast.style.opacity = 1;
-        setTimeout(() => toast.style.opacity = 0, 2000);
-
-        // Update Particles
-        for(let i=0; i<PARTICLE_COUNT; i++) {
-            const u = Math.random();
-            const v = Math.random();
-            const pos = getTarget(item.id, u, v, i);
-            targetPositions[i*3] = pos.x;
-            targetPositions[i*3+1] = pos.y;
-            targetPositions[i*3+2] = pos.z;
-            
-            // Apply Theme Color
-            colors[i*3] = theme[0]; colors[i*3+1] = theme[1]; colors[i*3+2] = theme[2];
-        }
-        particles.geometry.attributes.color.needsUpdate = true;
+        
+        generatePositions(id);
     }
 
-    // --- HAND TRACKING ---
-    let pageCooldown = false;
-    
+    // --- 5. GESTURE RECOGNITION (THE BRAIN) ---
+    function detect(lm) {
+        // Helpers
+        const isExt = (t, p) => lm[t].y < lm[p].y; // Is Finger Extended (Up)
+        const dx = (a,b) => lm[a].x - lm[b].x;
+        const dy = (a,b) => lm[a].y - lm[b].y;
+        
+        const thumb = lm[4];
+        const index = lm[8];
+        const mid = lm[12];
+        const ring = lm[16];
+        const pinky = lm[20];
+        const wrist = lm[0];
+
+        // 1. Basic Counts
+        // Note: Thumb extension check depends on hand side. Simple check: distance from pinky base
+        const thumbOut = Math.abs(thumb.x - lm[17].x) > 0.15; 
+        const iUp = isExt(8,6);
+        const mUp = isExt(12,10);
+        const rUp = isExt(16,14);
+        const pUp = isExt(20,18);
+        const count = [thumbOut, iUp, mUp, rUp, pUp].filter(Boolean).length;
+
+        // 2. Orientation Vectors (Wrist to IndexMCP)
+        const wx = lm[5].x - wrist.x;
+        const wy = lm[5].y - wrist.y;
+        
+        // Is Hand pointing UP, DOWN, LEFT, RIGHT?
+        let dir = 'up';
+        if (Math.abs(wx) > Math.abs(wy)) {
+            dir = wx > 0 ? 'left' : 'right'; // Mirrored cam
+        } else {
+            dir = wy > 0 ? 'down' : 'up'; // Y increases downwards in coords
+        }
+
+        // 3. Palm vs Back (Handedness heuristic)
+        // For Right hand: Thumb is Left of Index when Palm faces camera.
+        // We assume User's Right hand (Mirror -> Left on screen). 
+        // Let's use Z-diff if available, or just relative X.
+        const isPalm = thumb.x < lm[17].x; // Crude check
+
+        // --- MAPPING LOGIC ---
+        
+        // SPECIALS
+        if (count === 5 && dir === 'left') return 'river'; // 🫱
+        if (count === 0 && dir === 'left') return 'butterfly'; // 🤛
+        if (count === 0 && Math.abs(lm[8].z) < -0.1) return 'cube'; // 👊 (Fist Punch - closer to cam)
+        
+        // THUMBS
+        if (thumbOut && !iUp && !mUp && !rUp && !pUp) {
+            return thumb.y < wrist.y ? 'sphere' : 'donut'; // 👍 👎
+        }
+
+        // 1 FINGER (INDEX)
+        if (iUp && !mUp && !rUp && !pUp) {
+            if (dir === 'down') return 'rain'; // 👇
+            if (dir === 'left') return 'sun'; // 👈
+            if (dir === 'right') return 'saturn'; // 👉
+            // Up variations
+            if (isPalm) return 'bigbang'; // ☝️
+            return 'cloud'; // 👆 (Backhand)
+        }
+
+        // 2 FINGERS
+        if (iUp && mUp && !rUp && !pUp) return 'cake'; // ✌️
+        if (thumbOut && pUp && !iUp && !mUp && !rUp) return 'crown'; // 🤙
+        if (iUp && pUp && !mUp && !rUp && !thumbOut) return 'color'; // 🤘
+
+        // 3 FINGERS
+        if (iUp && mUp && pUp && !rUp) return 'cat'; // 🤟 (Actually ILY sign usually has thumb, but user said 3 fingers)
+        if (iUp && mUp && ring.y < lm[14].y && !pUp) return 'burger'; // 🖖 (Rough Vulcan approximation: split is hard, checking 3 fingers)
+        // Actually Vulcan is 4 fingers split. Let's map 3 fingers to Cat. 
+        if (iUp && mUp && thumbOut && !rUp && !pUp) return 'cat'; // Alternative ILY
+
+        // 4 FINGERS / VULCAN
+        // Vulcan is hard. Let's map "Ring and Middle together" vs "Split".
+        // Simple fallback: If 4 fingers up (no thumb) -> Burger.
+        if (iUp && mUp && rUp && pUp && !thumbOut) return 'burger'; 
+
+        // 5 FINGERS (OPEN)
+        if (count === 5) {
+            // Splay Check (Distance between Index and Pinky)
+            const spread = Math.abs(index.x - pinky.x);
+            if (spread > 0.25) return 'pizza'; // 🖐️ Wide
+            
+            // Orientation Check
+            if (dir === 'left' || dir === 'right') return 'dna'; // 👋 Waving (tilted)
+            if (!isPalm) return 'birds'; // 🤚 Back of hand
+            return 'milkyway'; // ✋ Standard
+        }
+
+        // 0 FINGERS (FIST)
+        if (count === 0) {
+            return 'heart'; // ✊ Default
+        }
+
+        // PINCH (OK)
+        const dist = Math.hypot(index.x-thumb.x, index.y-thumb.y);
+        if (dist < 0.05 && mUp && rUp && pUp) return 'blackhole'; // 👌
+
+        return currentId; // No change
+    }
+
     function onResults(results) {
-        if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) return;
-        
-        const lm = results.multiHandLandmarks[0];
-        
-        // Count fingers
-        const isExt = (t, p) => lm[t].y < lm[p].y;
-        const fingers = [
-            (lm[4].x < lm[3].x), // Thumb (Right hand assumption, works okay for interaction)
-            isExt(8,6), isExt(12,10), isExt(16,14), isExt(20,18)
-        ];
-        const count = fingers.filter(Boolean).length;
-
-        // Page Navigation (Thumbs Up/Down)
-        const isThumbUp = lm[4].y < lm[3].y && lm[4].y < lm[8].y && !fingers[1] && !fingers[2];
-        const isThumbDown = lm[4].y > lm[3].y && lm[4].y > lm[17].y && !fingers[1] && !fingers[2];
-
-        if ((isThumbUp || isThumbDown) && !pageCooldown) {
-            if (isThumbUp) STATE.page = (STATE.page + 1) % 5;
-            else STATE.page = (STATE.page - 1 + 5) % 5;
-            
-            pageCooldown = true;
-            setTimeout(() => pageCooldown = false, 1500);
-            updateShapeFromState();
-            return;
-        }
-
-        // Gesture Selection (0-5)
-        // If 5 fingers, idx=5. If 0 fingers, idx=0.
-        let newIdx = count;
-        if (newIdx > 5) newIdx = 5;
-
-        if (newIdx !== STATE.gestureIdx && !pageCooldown) {
-            STATE.gestureIdx = newIdx;
-            updateShapeFromState();
+        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+            const id = detect(results.multiHandLandmarks[0]);
+            activateSymbol(id);
         }
     }
 
-    // --- INIT ---
+    // --- 6. INIT ---
     const vid = document.getElementById('webcam');
     const hands = new Hands({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
-    hands.setOptions({maxNumHands:1, modelComplexity:0});
+    hands.setOptions({maxNumHands:1, modelComplexity:0, minDetectionConfidence:0.6});
     hands.onResults(onResults);
     
     const cam = new Camera(vid, {
@@ -372,29 +408,39 @@
         width: 640, height: 480, facingMode: 'user'
     });
     cam.start();
-
-    // Loop
+    
+    // Animation Loop
     function animate() {
         requestAnimationFrame(animate);
-        const pos = particles.geometry.attributes.position.array;
-        for(let i=0; i<PARTICLE_COUNT*3; i++) {
-            pos[i] += (targetPositions[i]-pos[i])*0.08;
+        const p = particles.getAttribute('position').array;
+        const c = particles.getAttribute('color').array;
+        
+        for(let i=0; i<CONFIG.particleCount*3; i++) {
+            p[i] += (target[i] - p[i]) * 0.08;
+            c[i] += (baseCols[i] - c[i]) * 0.05;
         }
-        particles.geometry.attributes.position.needsUpdate = true;
-        particles.rotation.y += 0.002;
+        
+        particles.getAttribute('position').needsUpdate = true;
+        particles.getAttribute('color').needsUpdate = true;
+        
+        mesh.rotation.y += 0.003;
         renderer.render(scene, camera);
+        
+        // Hide toast
+        if(document.getElementById('toast').style.opacity == 1) {
+            setTimeout(() => document.getElementById('toast').style.opacity = 0, 2000);
+        }
     }
     animate();
-    
-    // Initial Trigger
-    updateShapeFromState();
 
-    // Resize
     window.addEventListener('resize', () => {
-        camera.aspect = mainArea.clientWidth / mainArea.clientHeight;
+        camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
-        renderer.setSize(mainArea.clientWidth, mainArea.clientHeight);
+        renderer.setSize(window.innerWidth, window.innerHeight);
     });
+
+    // Start with Milky Way
+    activateSymbol('milkyway');
 
 </script>
 </body>
