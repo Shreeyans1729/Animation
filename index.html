@@ -3,75 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>21-Symbol Omni-Engine</title>
+    <title>Precision Gesture Engine</title>
     <style>
-        /* --- CORE UI --- */
-        body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Segoe UI', sans-serif; display: flex; height: 100vh; color: #fff; }
+        /* --- UI STYLING --- */
+        body { margin: 0; overflow: hidden; background-color: #020202; font-family: 'Segoe UI', sans-serif; display: flex; height: 100vh; color: #fff; }
         
-        /* --- SIDEBAR --- */
         #sidebar {
-            width: 280px;
-            background: #0f0f0f;
-            border-right: 1px solid #333;
-            display: flex;
-            flex-direction: column;
-            z-index: 20;
-            flex-shrink: 0;
-            box-shadow: 5px 0 20px rgba(0,0,0,0.6);
+            width: 280px; background: #0a0a0a; border-right: 1px solid #222;
+            display: flex; flex-direction: column; z-index: 20; flex-shrink: 0;
         }
-
-        .header { padding: 15px; background: #161616; border-bottom: 1px solid #333; }
-        .header h2 { margin: 0; color: #00e5ff; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 2px; }
-        .header p { margin: 5px 0 0; font-size: 0.75rem; color: #777; }
-
-        #list-container { flex-grow: 1; overflow-y: auto; padding: 10px; scroll-behavior: smooth; }
+        .header { padding: 20px; border-bottom: 1px solid #222; background: #111; }
+        .header h2 { margin: 0; color: #00ffa3; font-size: 1rem; text-transform: uppercase; letter-spacing: 2px; }
         
-        /* List Items */
+        #list { flex-grow: 1; overflow-y: auto; padding: 10px; }
+        
         .item { 
-            display: flex; align-items: center; padding: 8px 12px; 
-            margin-bottom: 4px; border-radius: 6px; cursor: pointer; 
-            transition: 0.2s; border-left: 3px solid transparent; background: #1a1a1a;
+            display: flex; align-items: center; padding: 10px; 
+            margin-bottom: 5px; border-radius: 8px; cursor: pointer; 
+            border: 1px solid transparent; transition: 0.2s; background: #141414;
         }
-        .item:hover { background: #252525; }
-        .item.active { background: rgba(0, 229, 255, 0.15); border-left-color: #00e5ff; }
+        .item.active { background: rgba(0, 255, 163, 0.1); border-color: #00ffa3; box-shadow: 0 0 10px rgba(0,255,163,0.1); }
+        .icon { font-size: 1.5rem; width: 40px; text-align: center; }
+        .name { font-size: 0.9rem; font-weight: bold; color: #ddd; }
         
-        .icon { font-size: 1.4rem; width: 35px; text-align: center; margin-right: 10px; }
-        .label { display: flex; flex-direction: column; }
-        .name { font-weight: 600; font-size: 0.9rem; color: #eee; }
-        .desc { font-size: 0.75rem; color: #888; }
+        #main { flex-grow: 1; position: relative; background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); }
+        
+        #debug-overlay {
+            position: absolute; top: 20px; left: 20px;
+            color: rgba(255,255,255,0.5); font-family: monospace; font-size: 0.8rem;
+            pointer-events: none;
+        }
 
-        /* --- MAIN VIEW --- */
-        #main { flex-grow: 1; position: relative; overflow: hidden; background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); }
-        
-        /* Camera PIP */
         #cam-box {
             position: absolute; bottom: 20px; right: 20px;
-            width: 180px; height: 135px;
-            border: 2px solid #444; border-radius: 12px;
-            overflow: hidden; z-index: 10; opacity: 0.8;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            width: 160px; height: 120px;
+            border: 2px solid #333; border-radius: 10px;
+            overflow: hidden; opacity: 0.8; background: #000;
         }
         #webcam { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 
-        /* Notification Toast */
-        #toast {
-            position: absolute; top: 30px; left: 50%; transform: translateX(-50%);
-            background: rgba(0, 229, 255, 0.9); color: #000;
-            padding: 10px 25px; border-radius: 30px; font-weight: bold;
-            box-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
-            opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 30;
-        }
-
-        /* --- MOBILE --- */
         @media (max-width: 768px) {
             body { flex-direction: column; }
-            #sidebar { width: 100%; height: 35vh; order: 2; border-right: none; border-top: 1px solid #333; }
-            #main { height: 65vh; order: 1; }
-            #cam-box { width: 100px; height: 75px; top: 10px; right: 10px; bottom: auto; }
-            .item { padding: 6px 10px; }
+            #sidebar { width: 100%; height: 30vh; border-right: none; border-top: 1px solid #333; order: 2; }
+            #main { height: 70vh; order: 1; }
         }
     </style>
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
@@ -79,328 +55,247 @@
 <body>
 
     <div id="sidebar">
-        <div class="header">
-            <h2>Omni-Gesture</h2>
-            <p>21 Symbols • 1 Page</p>
-        </div>
-        <div id="list-container">
-            </div>
+        <div class="header"><h2>Precision Mode</h2></div>
+        <div id="list"></div>
     </div>
 
     <div id="main">
-        <div id="toast">Ready</div>
+        <div id="debug-overlay">Waiting for hand...</div>
         <div id="cam-box"><video id="webcam" playsinline muted autoplay></video></div>
     </div>
 
 <script>
-    // --- 1. CONFIGURATION & DATA ---
-    const CONFIG = {
-        mobile: /Mobi|Android/i.test(navigator.userAgent),
-        particleCount: /Mobi|Android/i.test(navigator.userAgent) ? 10000 : 22000
-    };
-
+    // --- 1. SYMBOL DEFINITIONS ---
     const SYMBOLS = [
-        // FINGERS / POINTERS
-        { id: 'bigbang', icon: '☝️', name: 'Big Bang', desc: 'Point Up (Palm)' },
-        { id: 'cloud',   icon: '👆', name: 'Cloud', desc: 'Point Up (Backhand)' },
-        { id: 'rain',    icon: '👇', name: 'Rain', desc: 'Point Down' },
-        { id: 'sun',     icon: '👈', name: 'Sun', desc: 'Point Left' },
-        { id: 'saturn',  icon: '👉', name: 'Saturn', desc: 'Point Right' },
+        { id: 'bigbang', icon: '☝️', name: 'Big Bang', type: 'one-up-palm' },
+        { id: 'cloud',   icon: '👆', name: 'Cloud', type: 'one-up-back' },
+        { id: 'rain',    icon: '👇', name: 'Rain', type: 'one-down' },
+        { id: 'sun',     icon: '👈', name: 'Sun', type: 'one-left' },
+        { id: 'saturn',  icon: '👉', name: 'Saturn', type: 'one-right' },
         
-        // FISTS
-        { id: 'heart',   icon: '✊', name: 'Heart', desc: 'Fist (Upright)' },
-        { id: 'cube',    icon: '👊', name: 'Cube', desc: 'Fist (Forward/Punch)' },
-        { id: 'butterfly', icon: '🤛', name: 'Butterfly', desc: 'Fist (Sideways)' },
+        { id: 'heart',   icon: '✊', name: 'Heart', type: 'fist-up' },
+        { id: 'cube',    icon: '👊', name: 'Cube', type: 'fist-punch' },
+        { id: 'butterfly', icon: '🤛', name: 'Butterfly', type: 'fist-side' },
         
-        // OPEN HAND VARIANTS
-        { id: 'milkyway', icon: '✋', name: 'Milky Way', desc: 'Palm Open (Together)' },
-        { id: 'pizza',    icon: '🖐️', name: 'Pizza', desc: 'Palm Open (Splayed)' },
-        { id: 'birds',    icon: '🤚', name: 'Birds', desc: 'Back of Hand' },
-        { id: 'river',    icon: '🫱', name: 'River', desc: 'Hand Side (Right)' },
-        { id: 'dna',      icon: '👋', name: 'DNA', desc: 'Waving Hand' },
+        { id: 'milkyway', icon: '✋', name: 'Milky Way', type: 'open-palm' },
+        { id: 'pizza',    icon: '🖐️', name: 'Pizza', type: 'open-spread' },
+        { id: 'birds',    icon: '🤚', name: 'Birds', type: 'open-back' },
+        { id: 'river',    icon: '🫱', name: 'River', type: 'open-side' },
+        { id: 'dna',      icon: '👋', name: 'DNA', type: 'wave' },
         
-        // COMPLEX SHAPES
-        { id: 'cake',    icon: '✌️', name: 'Cake', desc: 'Victory Sign' },
-        { id: 'blackhole', icon: '👌', name: 'Black Hole', desc: 'OK Sign' },
-        { id: 'sphere',  icon: '👍', name: 'Sphere', desc: 'Thumbs Up' },
-        { id: 'donut',   icon: '👎', name: 'Donut', desc: 'Thumbs Down' },
-        { id: 'burger',  icon: '🖖', name: 'Burger', desc: 'Vulcan Salute' },
-        { id: 'crown',   icon: '🤙', name: 'Crown', desc: 'Shaka' },
-        { id: 'cat',     icon: '🤟', name: 'Cat', desc: 'Love Sign' },
-        
-        // SPECIAL
-        { id: 'color',   icon: '🤘', name: 'Color Shift', desc: 'Rock On' }
+        { id: 'cake',    icon: '✌️', name: 'Cake', type: 'victory' },
+        { id: 'blackhole', icon: '👌', name: 'Black Hole', type: 'pinch' },
+        { id: 'sphere',  icon: '👍', name: 'Sphere', type: 'thumb-up' },
+        { id: 'donut',   icon: '👎', name: 'Donut', type: 'thumb-down' },
+        { id: 'burger',  icon: '🖖', name: 'Burger', type: 'vulcan' },
+        { id: 'crown',   icon: '🤙', name: 'Crown', type: 'shaka' },
+        { id: 'cat',     icon: '🤟', name: 'Cat', type: 'rock' },
+        { id: 'color',   icon: '🤘', name: 'Color Shift', type: 'metal' }
     ];
 
-    // --- 2. UI GENERATOR ---
-    const listEl = document.getElementById('list-container');
-    
-    SYMBOLS.forEach((sym, idx) => {
-        const div = document.createElement('div');
-        div.className = 'item';
-        div.id = `item-${sym.id}`;
-        div.innerHTML = `<div class="icon">${sym.icon}</div><div class="label"><span class="name">${sym.name}</span><span class="desc">${sym.desc}</span></div>`;
-        div.onclick = () => activateSymbol(sym.id);
-        listEl.appendChild(div);
+    // --- 2. BUILD UI ---
+    const list = document.getElementById('list');
+    SYMBOLS.forEach(s => {
+        const el = document.createElement('div');
+        el.className = 'item';
+        el.id = `item-${s.id}`;
+        el.innerHTML = `<div class="icon">${s.icon}</div><div class="name">${s.name}</div>`;
+        list.appendChild(el);
     });
 
     // --- 3. THREE.JS ENGINE ---
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-    camera.position.z = CONFIG.mobile ? 50 : 35;
-
+    camera.position.z = 40;
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     document.getElementById('main').appendChild(renderer.domElement);
 
-    const particles = new THREE.BufferGeometry();
-    const pos = new Float32Array(CONFIG.particleCount * 3);
-    const target = new Float32Array(CONFIG.particleCount * 3);
-    const cols = new Float32Array(CONFIG.particleCount * 3);
-    const baseCols = new Float32Array(CONFIG.particleCount * 3);
+    const PARTICLE_COUNT = 15000;
+    const geo = new THREE.BufferGeometry();
+    const pos = new Float32Array(PARTICLE_COUNT*3);
+    const target = new Float32Array(PARTICLE_COUNT*3);
+    const col = new Float32Array(PARTICLE_COUNT*3);
+    const baseCol = new Float32Array(PARTICLE_COUNT*3);
 
-    for(let i=0; i<CONFIG.particleCount; i++){
-        pos[i*3] = (Math.random()-0.5)*100;
-        pos[i*3+1] = (Math.random()-0.5)*100;
-        pos[i*3+2] = (Math.random()-0.5)*100;
-        target[i*3]=pos[i*3];
-        cols[i*3]=1; cols[i*3+1]=1; cols[i*3+2]=1;
+    for(let i=0; i<PARTICLE_COUNT*3; i++) {
+        pos[i] = (Math.random()-0.5)*100;
+        target[i] = pos[i];
+        col[i]=1; baseCol[i]=1;
     }
-    particles.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    particles.setAttribute('color', new THREE.BufferAttribute(cols, 3));
-    
-    const mat = new THREE.PointsMaterial({ size: CONFIG.mobile?0.25:0.15, vertexColors: true, blending: THREE.AdditiveBlending, transparent: true, opacity: 0.8 });
-    const mesh = new THREE.Points(particles, mat);
-    scene.add(mesh);
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    const particles = new THREE.Points(geo, new THREE.PointsMaterial({size: 0.15, vertexColors: true, transparent: true, opacity: 0.8}));
+    scene.add(particles);
 
-    // --- 4. MATH SHAPES ---
-    function generatePositions(type) {
-        let r, g, b;
+    function setShape(id) {
+        let r=0, g=1, b=0.8; // Default Cyan
         
-        // Default Colors
-        if(type==='heart') { r=1; g=0; b=0.2; }
-        else if(type==='rain') { r=0; g=0.5; b=1; }
-        else if(type==='sun') { r=1; g=0.6; b=0; }
-        else if(type==='milkyway') { r=0.5; g=0; b=1; }
-        else if(type==='pizza') { r=1; g=0.5; b=0; }
-        else { r=0; g=1; b=0.8; } // Cyan default
-
-        for(let i=0; i<CONFIG.particleCount; i++) {
-            const u = Math.random(); 
-            const v = Math.random();
+        for(let i=0; i<PARTICLE_COUNT; i++) {
             const idx = i*3;
+            const u = Math.random(); const v = Math.random();
             let x=0, y=0, z=0;
             const PI = Math.PI;
 
-            switch(type) {
-                case 'bigbang': x=(u-0.5)*100; y=(v-0.5)*100; z=(Math.random()-0.5)*100; break;
-                case 'cloud': x=(u-0.5)*40; y=(v-0.5)*15; z=(Math.random()-0.5)*15; break;
-                case 'rain': x=(u-0.5)*30; y=20 - v*40; z=(Math.random()-0.5)*30; break;
-                case 'sun': const rs=12; const as=u*2*PI; const bs=v*PI; x=rs*Math.sin(bs)*Math.cos(as); y=rs*Math.sin(bs)*Math.sin(as); z=rs*Math.cos(bs); 
-                    x += (Math.random()-0.5)*2; // fuzzy
-                    break;
-                case 'saturn': 
-                    if(i<CONFIG.particleCount*0.7) { // Planet
-                         const rp=8; x=rp*Math.sin(v*PI)*Math.cos(u*2*PI); y=rp*Math.sin(v*PI)*Math.sin(u*2*PI); z=rp*Math.cos(v*PI);
-                    } else { // Rings
-                        const rr=12+u*6; const ar=v*2*PI; x=rr*Math.cos(ar); z=rr*Math.sin(ar); y=(Math.random()-0.5)*0.5;
-                    }
-                    // Tilt
-                    const ty=y*Math.cos(0.4)-z*Math.sin(0.4); const tz=y*Math.sin(0.4)+z*Math.cos(0.4); y=ty; z=tz;
-                    break;
-                case 'heart': const th=u*2*PI; x=16*Math.pow(Math.sin(th),3); y=13*Math.cos(th)-5*Math.cos(2*th)-2*Math.cos(3*th)-Math.cos(4*th); z=(v-0.5)*5; break;
-                case 'cube': const s=18; x=(u-0.5)*s; y=(v-0.5)*s; z=(Math.random()-0.5)*s; break;
-                case 'butterfly': 
-                    const tb=u*2*PI; 
-                    const rb=Math.exp(Math.cos(tb)) - 2*Math.cos(4*tb) - Math.pow(Math.sin(tb/12), 5);
-                    x=rb*Math.cos(tb)*8; y=rb*Math.sin(tb)*8; z=(v-0.5)*2 + Math.abs(x)*0.2; 
-                    break;
-                case 'milkyway': const galR=u*25; const galA=galR+i*0.05; x=galR*Math.cos(galA); z=galR*Math.sin(galA); y=(v-0.5)*5; break;
-                case 'pizza': const pR=u*15; const pA=v*2*PI; x=pR*Math.cos(pA); z=pR*Math.sin(pA); y=0; 
-                    if(Math.random()>0.9) y=1; // toppings
-                    break;
-                case 'birds': // V shapes
-                    const flockX = (u-0.5)*40; const flockZ=(v-0.5)*20; 
-                    x=flockX + Math.abs(Math.sin(i))*2; y=Math.sin(flockX*0.2)*5 + Math.cos(i)*2; z=flockZ;
-                    break;
-                case 'river': x=(u-0.5)*50; z=(v-0.5)*20; y=5*Math.sin(x*0.2 + i*0.001); break;
-                case 'dna': const hD=(u-0.5)*40; const aD=hD*0.5; const str=(i%2==0)?0:PI; x=8*Math.cos(aD+str); z=8*Math.sin(aD+str); y=hD; break;
-                case 'cake': // Cylinders
-                     const ly = i%3; 
-                     const cr = ly==0?10 : (ly==1?7:4);
-                     const ch = ly==0?-5 : (ly==1?0:5);
-                     x=cr*Math.cos(u*2*PI); z=cr*Math.sin(u*2*PI); y=ch + (v-0.5)*3;
-                     break;
-                case 'blackhole': const bR=6+u*10; const bA=v*2*PI + bR; x=bR*Math.cos(bA); z=bR*Math.sin(bA); y=(10/bR)*-5; break;
-                case 'sphere': x=15*Math.sin(v*PI)*Math.cos(u*2*PI); y=15*Math.sin(v*PI)*Math.sin(u*2*PI); z=15*Math.cos(v*PI); break;
-                case 'donut': const tR=12; const tr=4; x=(tR+tr*Math.cos(v*2*PI))*Math.cos(u*2*PI); y=(tR+tr*Math.cos(v*2*PI))*Math.sin(u*2*PI); z=tr*Math.sin(v*2*PI); break;
-                case 'burger': // Bun, Meat, Bun
-                     const bl = i%3;
-                     const br = 9; 
-                     const by = bl==0?-4 : (bl==1?0:4);
-                     x=br*Math.cos(u*2*PI); z=br*Math.sin(u*2*PI); y=by + (v-0.5)*3;
-                     if(bl==1) { x*=0.9; z*=0.9; } // Meat smaller
-                     break;
-                case 'crown': const cA=u*2*PI; const cR=10; x=cR*Math.cos(cA); z=cR*Math.sin(cA); y=5*Math.abs(Math.sin(cA*2.5)) - 5; break;
-                case 'cat': 
-                    // Head
-                    x=8*Math.sin(v*PI)*Math.cos(u*2*PI); y=8*Math.sin(v*PI)*Math.sin(u*2*PI); z=8*Math.cos(v*PI);
-                    // Ears
-                    if(i>CONFIG.particleCount*0.85) { x=4 + u*3; y=6 + v*4; z=0; }
-                    if(i>CONFIG.particleCount*0.92) { x=-4 - u*3; y=6 + v*4; z=0; }
-                    break;
-                case 'color': // Special case, no shape change, just chaos
-                    x=(Math.random()-0.5)*50; y=(Math.random()-0.5)*50; z=(Math.random()-0.5)*50; 
-                    break;
+            // --- SHAPE MATH ---
+            if (id === 'bigbang') { x=(u-0.5)*60; y=(v-0.5)*60; z=(Math.random()-0.5)*60; r=1; g=0.9; b=0.5; }
+            else if (id === 'cloud') { x=(u-0.5)*40; y=(v-0.5)*15; z=(Math.random()-0.5)*15; r=1; g=1; b=1; }
+            else if (id === 'rain') { x=(u-0.5)*30; y=20-v*40; z=(Math.random()-0.5)*30; r=0; g=0.5; b=1; }
+            else if (id === 'sun') { const rad=12; x=rad*Math.cos(u*2*PI)*Math.sin(v*PI); y=rad*Math.sin(u*2*PI)*Math.sin(v*PI); z=rad*Math.cos(v*PI); x+=(Math.random()-0.5)*5; r=1; g=0.5; b=0; }
+            else if (id === 'saturn') { 
+                if(i<PARTICLE_COUNT*0.7) { x=8*Math.cos(u*2*PI)*Math.sin(v*PI); z=8*Math.sin(u*2*PI)*Math.sin(v*PI); y=8*Math.cos(v*PI); }
+                else { const ang=u*2*PI; const rad=12+v*6; x=rad*Math.cos(ang); z=rad*Math.sin(ang); y=0; }
+                const t=0.4; const _y=y*Math.cos(t)-z*Math.sin(t); const _z=y*Math.sin(t)+z*Math.cos(t); y=_y; z=_z; r=1; g=0.8; b=0.4;
             }
-            
+            else if (id === 'heart') { const t=u*2*PI; x=16*Math.pow(Math.sin(t),3); y=13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t); z=(v-0.5)*5; r=1; g=0; b=0.2; }
+            else if (id === 'cube') { const s=18; x=(u-0.5)*s; y=(v-0.5)*s; z=(Math.random()-0.5)*s; r=0; g=1; b=0; }
+            else if (id === 'butterfly') { const t=u*2*PI; const R = Math.exp(Math.cos(t)) - 2*Math.cos(4*t) - Math.pow(Math.sin(t/12),5); x=R*Math.cos(t)*8; y=R*Math.sin(t)*8; z=(v-0.5)*5; r=1; g=0; b=1; }
+            else if (id === 'milkyway') { const ang=u*25+i*0.05; const rad=u*25; x=rad*Math.cos(ang); z=rad*Math.sin(ang); y=(v-0.5)*5; r=0.5; g=0; b=1; }
+            else if (id === 'pizza') { const ang=v*2*PI; const rad=u*15; x=rad*Math.cos(ang); z=rad*Math.sin(ang); y=0; if(Math.random()>0.9) y=1; r=1; g=0.6; b=0; }
+            else if (id === 'birds') { x=(u-0.5)*40; z=(v-0.5)*20; y=Math.sin(x*0.3+i)*2 + Math.abs(Math.sin(i*0.1))*3; r=1; g=1; b=1; }
+            else if (id === 'river') { x=(u-0.5)*50; z=(v-0.5)*20; y=5*Math.sin(x*0.2+i*0.001); r=0; g=0.5; b=1; }
+            else if (id === 'dna') { const h=(u-0.5)*40; const a=h*0.5; const off=i%2==0?0:PI; x=8*Math.cos(a+off); z=8*Math.sin(a+off); y=h; r=1; g=0; b=0.5; }
+            else if (id === 'cake') { const l=i%3; const rad=l==0?10:l==1?7:4; const h=l==0?-5:l==1?0:5; x=rad*Math.cos(u*2*PI); z=rad*Math.sin(u*2*PI); y=h+(v-0.5)*3; r=1; g=0.4; b=0.6; }
+            else if (id === 'blackhole') { const rad=6+u*10; const ang=v*2*PI+rad; x=rad*Math.cos(ang); z=rad*Math.sin(ang); y=(10/rad)*-8; r=0.2; g=0; b=0.4; }
+            else if (id === 'sphere') { x=15*Math.cos(u*2*PI)*Math.sin(v*PI); y=15*Math.sin(u*2*PI)*Math.sin(v*PI); z=15*Math.cos(v*PI); r=0; g=0.8; b=1; }
+            else if (id === 'donut') { const R=12; const _r=4; x=(R+_r*Math.cos(v*2*PI))*Math.cos(u*2*PI); y=(R+_r*Math.cos(v*2*PI))*Math.sin(u*2*PI); z=_r*Math.sin(v*2*PI); r=1; g=0.5; b=0; }
+            else if (id === 'burger') { const l=i%3; const rad=9; const h=l==0?-4:l==1?0:4; x=rad*Math.cos(u*2*PI); z=rad*Math.sin(u*2*PI); y=h+(v-0.5)*3; if(l==1){x*=0.9; z*=0.9;} r=1; g=0.6; b=0.2; }
+            else if (id === 'crown') { const ang=u*2*PI; const rad=10; x=rad*Math.cos(ang); z=rad*Math.sin(ang); y=5*Math.abs(Math.sin(ang*2.5))-5; r=1; g=0.8; b=0; }
+            else if (id === 'cat') { x=8*Math.cos(u*2*PI)*Math.sin(v*PI); y=8*Math.sin(u*2*PI)*Math.sin(v*PI); z=8*Math.cos(v*PI); if(i>PARTICLE_COUNT*0.8){ x=4+u*3; y=6+v*4; z=0; } if(i>PARTICLE_COUNT*0.9){ x=-4-u*3; y=6+v*4; z=0; } r=0.8; g=0.4; b=1; }
+            else if (id === 'color') { x=(Math.random()-0.5)*50; y=(Math.random()-0.5)*50; z=(Math.random()-0.5)*50; r=Math.random(); g=Math.random(); b=Math.random(); }
+
             target[idx]=x; target[idx+1]=y; target[idx+2]=z;
-            
-            // Set Color
-            baseCols[idx]=r; baseCols[idx+1]=g; baseCols[idx+2]=b;
-            if (type === 'color') { // Rainbow mode
-                 baseCols[idx]=Math.random(); baseCols[idx+1]=Math.random(); baseCols[idx+2]=Math.random();
-            }
+            baseCol[idx]=r; baseCol[idx+1]=g; baseCol[idx+2]=b;
         }
     }
 
-    let currentId = '';
-    function activateSymbol(id) {
-        if(currentId === id) return;
-        currentId = id;
-        
-        // Update UI
-        document.querySelectorAll('.item').forEach(el => el.classList.remove('active'));
+    let currentSymbol = '';
+    function activate(id) {
+        if(currentSymbol === id) return;
+        currentSymbol = id;
+        document.querySelectorAll('.item').forEach(e => e.classList.remove('active'));
         const el = document.getElementById(`item-${id}`);
         if(el) {
             el.classList.add('active');
-            el.scrollIntoView({block: 'center', behavior: 'smooth'});
+            el.scrollIntoView({block:'center', behavior:'smooth'});
         }
-
-        // Show Toast
-        const toast = document.getElementById('toast');
-        const sym = SYMBOLS.find(s => s.id === id);
-        toast.innerText = `${sym.icon} ${sym.name}`;
-        toast.style.opacity = 1;
-        
-        generatePositions(id);
+        setShape(id);
     }
 
-    // --- 5. GESTURE RECOGNITION (THE BRAIN) ---
-    function detect(lm) {
-        // Helpers
-        const isExt = (t, p) => lm[t].y < lm[p].y; // Is Finger Extended (Up)
-        const dx = (a,b) => lm[a].x - lm[b].x;
-        const dy = (a,b) => lm[a].y - lm[b].y;
+    // --- 4. ADVANCED DETECTION ENGINE ---
+    function detectSymbol(lm) {
+        // A. FINGER STATES (Extended if Tip is further from Wrist than Pip)
+        // We use distance to wrist (0)
+        const d = (i) => Math.hypot(lm[i].x-lm[0].x, lm[i].y-lm[0].y);
+        // Compare Tip(8) distance vs Pip(6) distance
+        const isExt = (tip, pip) => d(tip) > d(pip) * 1.1; // 10% buffer
         
-        const thumb = lm[4];
-        const index = lm[8];
-        const mid = lm[12];
-        const ring = lm[16];
-        const pinky = lm[20];
-        const wrist = lm[0];
+        const i = isExt(8,6);
+        const m = isExt(12,10);
+        const r = isExt(16,14);
+        const p = isExt(20,18);
+        const t = d(4) > d(3) * 1.1; // Thumb simple check
 
-        // 1. Basic Counts
-        // Note: Thumb extension check depends on hand side. Simple check: distance from pinky base
-        const thumbOut = Math.abs(thumb.x - lm[17].x) > 0.15; 
-        const iUp = isExt(8,6);
-        const mUp = isExt(12,10);
-        const rUp = isExt(16,14);
-        const pUp = isExt(20,18);
-        const count = [thumbOut, iUp, mUp, rUp, pUp].filter(Boolean).length;
+        const count = [t,i,m,r,p].filter(Boolean).length;
 
-        // 2. Orientation Vectors (Wrist to IndexMCP)
-        const wx = lm[5].x - wrist.x;
-        const wy = lm[5].y - wrist.y;
+        // B. DIRECTION VECTOR (Wrist -> Middle Finger MCP)
+        // This gives 360 degree direction of hand
+        const dx = lm[9].x - lm[0].x;
+        const dy = lm[9].y - lm[0].y;
+        const angle = Math.atan2(dy, dx) * (180/Math.PI); // -180 to 180
         
-        // Is Hand pointing UP, DOWN, LEFT, RIGHT?
-        let dir = 'up';
-        if (Math.abs(wx) > Math.abs(wy)) {
-            dir = wx > 0 ? 'left' : 'right'; // Mirrored cam
-        } else {
-            dir = wy > 0 ? 'down' : 'up'; // Y increases downwards in coords
+        let dir = 'down'; // 90ish
+        if (angle > -45 && angle < 45) dir = 'left'; // Camera is mirrored
+        else if (angle > 45 && angle < 135) dir = 'down';
+        else if (angle < -45 && angle > -135) dir = 'up';
+        else dir = 'right';
+
+        // C. PALM vs BACK (Handedness Heuristic)
+        // For a Right hand (on screen Left), Thumb is Left of Index = Palm
+        // We will assume standard "Selfie" mirroring
+        const isPalm = lm[4].x < lm[17].x; // Thumb vs Pinky X-check
+
+        // D. PINCH CHECK
+        const pinchDist = Math.hypot(lm[8].x-lm[4].x, lm[8].y-lm[4].y);
+        const isPinch = pinchDist < 0.05;
+
+        // E. Z-DEPTH (Punch Check)
+        // If Knuckles(9) Z is significantly less than Wrist(0) Z
+        // Note: MP Z is relative to wrist, so check absolute values
+        const isPunch = lm[9].z < -0.15; // Closer to camera
+
+        // --- DEBUG INFO ---
+        document.getElementById('debug-overlay').innerHTML = 
+            `Fingers: ${count}<br>Dir: ${dir}<br>Palm: ${isPalm}<br>Pinch: ${isPinch.toFixed(2)}`;
+
+        // --- MAPPING ---
+        
+        // 1. PINCH PRIORITY
+        if (isPinch && m && r && p) return 'blackhole'; // 👌
+
+        // 2. FISTS (0 Fingers)
+        if (count === 0 || (count === 1 && t)) {
+            if (isPunch) return 'cube'; // 👊 Punch forward
+            if (dir === 'up') return 'heart'; // ✊
+            if (dir === 'left' || dir === 'right') return 'butterfly'; // 🤛
         }
 
-        // 3. Palm vs Back (Handedness heuristic)
-        // For Right hand: Thumb is Left of Index when Palm faces camera.
-        // We assume User's Right hand (Mirror -> Left on screen). 
-        // Let's use Z-diff if available, or just relative X.
-        const isPalm = thumb.x < lm[17].x; // Crude check
-
-        // --- MAPPING LOGIC ---
-        
-        // SPECIALS
-        if (count === 5 && dir === 'left') return 'river'; // 🫱
-        if (count === 0 && dir === 'left') return 'butterfly'; // 🤛
-        if (count === 0 && Math.abs(lm[8].z) < -0.1) return 'cube'; // 👊 (Fist Punch - closer to cam)
-        
-        // THUMBS
-        if (thumbOut && !iUp && !mUp && !rUp && !pUp) {
-            return thumb.y < wrist.y ? 'sphere' : 'donut'; // 👍 👎
+        // 3. THUMBS ONLY
+        if (t && !i && !m && !r && !p) {
+            return dir === 'up' ? 'sphere' : 'donut'; // 👍 👎 (Approx based on angle)
         }
 
-        // 1 FINGER (INDEX)
-        if (iUp && !mUp && !rUp && !pUp) {
+        // 4. ONE FINGER (INDEX)
+        if (i && !m && !r && !p) {
             if (dir === 'down') return 'rain'; // 👇
             if (dir === 'left') return 'sun'; // 👈
             if (dir === 'right') return 'saturn'; // 👉
-            // Up variations
-            if (isPalm) return 'bigbang'; // ☝️
-            return 'cloud'; // 👆 (Backhand)
+            if (dir === 'up') return isPalm ? 'bigbang' : 'cloud'; // ☝️ vs 👆
         }
 
-        // 2 FINGERS
-        if (iUp && mUp && !rUp && !pUp) return 'cake'; // ✌️
-        if (thumbOut && pUp && !iUp && !mUp && !rUp) return 'crown'; // 🤙
-        if (iUp && pUp && !mUp && !rUp && !thumbOut) return 'color'; // 🤘
+        // 5. TWO FINGERS
+        if (i && m && !r && !p) return 'cake'; // ✌️
+        if (t && p && !i && !m && !r) return 'crown'; // 🤙
+        if (i && p && !m && !r) return 'color'; // 🤘
 
-        // 3 FINGERS
-        if (iUp && mUp && pUp && !rUp) return 'cat'; // 🤟 (Actually ILY sign usually has thumb, but user said 3 fingers)
-        if (iUp && mUp && ring.y < lm[14].y && !pUp) return 'burger'; // 🖖 (Rough Vulcan approximation: split is hard, checking 3 fingers)
-        // Actually Vulcan is 4 fingers split. Let's map 3 fingers to Cat. 
-        if (iUp && mUp && thumbOut && !rUp && !pUp) return 'cat'; // Alternative ILY
-
-        // 4 FINGERS / VULCAN
-        // Vulcan is hard. Let's map "Ring and Middle together" vs "Split".
-        // Simple fallback: If 4 fingers up (no thumb) -> Burger.
-        if (iUp && mUp && rUp && pUp && !thumbOut) return 'burger'; 
-
-        // 5 FINGERS (OPEN)
-        if (count === 5) {
-            // Splay Check (Distance between Index and Pinky)
-            const spread = Math.abs(index.x - pinky.x);
-            if (spread > 0.25) return 'pizza'; // 🖐️ Wide
+        // 6. OPEN HAND (5 Fingers)
+        if (count >= 4) {
+            // Check Spread (Index vs Pinky distance)
+            const spread = Math.hypot(lm[8].x-lm[20].x, lm[8].y-lm[20].y);
             
-            // Orientation Check
-            if (dir === 'left' || dir === 'right') return 'dna'; // 👋 Waving (tilted)
-            if (!isPalm) return 'birds'; // 🤚 Back of hand
+            if (dir === 'left' || dir === 'right') {
+                if (Math.abs(angle) < 20 || Math.abs(angle) > 160) return 'river'; // 🫱 Horizontal
+                return 'dna'; // 👋 Waving (tilted)
+            }
+            if (spread > 0.3) return 'pizza'; // 🖐️ Wide
+            if (!isPalm) return 'birds'; // 🤚 Back
+            
+            // Vulcan Logic (Gap between Middle and Ring)
+            // Dist(12,16) vs Dist(8,12)
+            const midRing = Math.hypot(lm[12].x-lm[16].x, lm[12].y-lm[16].y);
+            const indMid = Math.hypot(lm[8].x-lm[12].x, lm[8].y-lm[12].y);
+            if (midRing > indMid * 1.5) return 'burger'; // 🖖
+
             return 'milkyway'; // ✋ Standard
         }
+        
+        // 7. THREE FINGERS
+        if (i && m && p && !r) return 'cat'; // 🤟
 
-        // 0 FINGERS (FIST)
-        if (count === 0) {
-            return 'heart'; // ✊ Default
-        }
-
-        // PINCH (OK)
-        const dist = Math.hypot(index.x-thumb.x, index.y-thumb.y);
-        if (dist < 0.05 && mUp && rUp && pUp) return 'blackhole'; // 👌
-
-        return currentId; // No change
+        return currentSymbol;
     }
 
     function onResults(results) {
-        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-            const id = detect(results.multiHandLandmarks[0]);
-            activateSymbol(id);
+        if(results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+            const id = detectSymbol(results.multiHandLandmarks[0]);
+            activate(id);
         }
     }
 
-    // --- 6. INIT ---
+    // --- 5. CAMERA START ---
     const vid = document.getElementById('webcam');
     const hands = new Hands({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
-    hands.setOptions({maxNumHands:1, modelComplexity:0, minDetectionConfidence:0.6});
+    hands.setOptions({maxNumHands:1, modelComplexity:1, minDetectionConfidence:0.6}); // Complexity 1 for better accuracy
     hands.onResults(onResults);
     
     const cam = new Camera(vid, {
@@ -408,28 +303,21 @@
         width: 640, height: 480, facingMode: 'user'
     });
     cam.start();
-    
-    // Animation Loop
+    activate('bigbang'); // Init
+
+    // --- 6. ANIM LOOP ---
     function animate() {
         requestAnimationFrame(animate);
-        const p = particles.getAttribute('position').array;
-        const c = particles.getAttribute('color').array;
-        
-        for(let i=0; i<CONFIG.particleCount*3; i++) {
-            p[i] += (target[i] - p[i]) * 0.08;
-            c[i] += (baseCols[i] - c[i]) * 0.05;
+        const p = particles.geometry.attributes.position.array;
+        const c = particles.geometry.attributes.color.array;
+        for(let i=0; i<PARTICLE_COUNT*3; i++){
+            p[i] += (target[i]-p[i]) * 0.08;
+            c[i] += (baseCol[i]-c[i]) * 0.05;
         }
-        
-        particles.getAttribute('position').needsUpdate = true;
-        particles.getAttribute('color').needsUpdate = true;
-        
-        mesh.rotation.y += 0.003;
+        particles.geometry.attributes.position.needsUpdate = true;
+        particles.geometry.attributes.color.needsUpdate = true;
+        particles.rotation.y += 0.002;
         renderer.render(scene, camera);
-        
-        // Hide toast
-        if(document.getElementById('toast').style.opacity == 1) {
-            setTimeout(() => document.getElementById('toast').style.opacity = 0, 2000);
-        }
     }
     animate();
 
@@ -438,9 +326,6 @@
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
     });
-
-    // Start with Milky Way
-    activateSymbol('milkyway');
 
 </script>
 </body>
